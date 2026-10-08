@@ -15,3 +15,16 @@ typedef Vector3 Vec3;
 #ifdef DT_LIMIT
 #define DT_LIMIT_FIX dt > DT_LIMIT ? dt = DT_LIMIT : dt
 #endif
+
+// Must be 2 or 3.
+#define GAME_D 2
+#ifndef GAME_D
+#define GAME_D 2
+#endif
+#if (GAME_D < 2) || (GAME_D > 3)
+#define GAME_D 2
+#endif
+
+#define FUNCTIONAL FALSE
+
+#define COMMON_MOVE_KEY (IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D))

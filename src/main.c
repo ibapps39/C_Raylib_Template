@@ -3,15 +3,6 @@
 #include "file_directory_managment.h"
 #include "structures.h"
 
-// Must be 2 or 3.
-#define GAME_D 2
-#ifndef GAME_D
-#define GAME_D 2
-#endif
-#if (GAME_D < 2) || (GAME_D > 3)
-#define GAME_D 2
-#endif
-
 #define VIRT_WIDTH 600
 #define VIRT_HEIGHT 600
 #define DEFAULT_FPS 60
@@ -28,7 +19,7 @@ int main(void)
         InitWindow(SCREEN_W, SCREEN_H, "Raylib_Template");
         SetTargetFPS(TARGET_FPS);
 
-        Cam2D cam = cam2d_make((Vec2){0});
+        Camera2D cam = init_cam(0,0);
         const RenderTexture2D renderTexture = LoadRenderTexture(VIRT_WIDTH, VIRT_HEIGHT);
         const Rectangle renderTextureSrc = {0, 0, VIRT_WIDTH, -VIRT_HEIGHT};
         const Vec2 renderTextureOrigin = (Vec2){0};
@@ -36,9 +27,8 @@ int main(void)
         while (!WindowShouldClose())
         {
                 float dt = GetFrameTime();
-                CamInput in = cam_input_read();
 
-                cam2d_update(&cam, in, dt);
+                update_cam(&cam, 100*dt, 10*dt);
 
                 int W = GetScreenWidth();
                 int H = GetScreenHeight();
@@ -52,7 +42,7 @@ int main(void)
                 // Pass 1: Render world using VIRTUAL coordinates
                 BeginTextureMode(renderTexture);
                         ClearBackground(BG_COLOR);
-                        BeginMode2D(cam.base_cam);
+                        BeginMode2D(cam);
                                 // Always use VIRT_WIDTH and VIRT_HEIGHT here
                                 DrawRectangle(VIRT_WIDTH / 2, VIRT_HEIGHT / 2, 10, 10, RED);
                                 DrawText("I am in the renderTexture's center", VIRT_WIDTH / 2, VIRT_HEIGHT / 2, 10, WHITE);
