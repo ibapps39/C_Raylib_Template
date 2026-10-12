@@ -1,59 +1,44 @@
 #pragma once
 #include "common.h"
 
-static enum CAM_INFO 
+// index into Cam_Info_ECS
+typedef enum CAM_INFO
 {
     POS,
     PAST_POS,
     FORWARD,
     UP,
-    RIGHT,
-    LEFT
-};
-static Vec2 Cam_Info_ECS[6] = {
-    (Vec2){.x = 0, .y = 0}, // POS
-    (Vec2){.x = 0, .y = 0}, // PAST_POS
-    (Vec2){.x = 0, .y = 0}, // FORWARD
-    (Vec2){.x = 0, .y = 0}, // UP
-    (Vec2){.x = 0, .y = 0}, // RIGHT
-    (Vec2){.x = 0, .y = 0}  // LEFT
-};
+    RIGHT
+} CAM_INFO;
+
+/* ------------------------------------------------------------------ */
+/* 2D                                                                  */
+/* ------------------------------------------------------------------ */
+#if GAME_D == 2
+
+static Vec2 Cam_Info_ECS[5] = {0};
 
 typedef struct TrackedCam
 {
-        Vec2 past_pos;
-        Vec2 pos;
-        Vec2 up;
-        Vec2 right;
-        Vec2 forward;
-        Vec2 left;
-        Camera2D cam;
+    Vec2 past_pos;
+    Vec2 pos;
+    Vec2 up;
+    Vec2 right;
+    Vec2 forward;
+    Camera2D cam;
 } TrackedCam;
 
-static Camera2D init_cam(const int x, const int y) {
+static Camera2D init_cam(const int offset_x, const int offset_y)
+{
     Camera2D cam = {0};
-    cam.target = (Vec2){.x = x, .y = y};
-    cam.offset = (Vec2){.x = x, .y = y};
+    cam.target = (Vec2){.x = offset_x, .y = offset_y};
+    cam.offset = (Vec2){.x = offset_x, .y = offset_y};
     cam.rotation = 0.0f;
     cam.zoom = 1.0f;
     return cam;
 }
 
-static void move_cam(Camera2D* cam, const float speed)
-{
-    //WSAD
-    if (IsKeyDown(KEY_W)) cam->offset.y -= speed;
-    if (IsKeyDown(KEY_S)) cam->offset.y += speed;
-    if (IsKeyDown(KEY_A)) cam->offset.x -= speed;
-    if (IsKeyDown(KEY_D)) cam->offset.x += speed;
-}
-static void rotate_cam(Camera2D* cam, const float speed)
-{
-    if (IsKeyDown(KEY_Q)) cam->rotation -= speed;
-    if (IsKeyDown(KEY_E)) cam->rotation += speed;
-}
-
-static Vec2 get_move_norm() 
+static Vec2 get_move_norm(void)
 {
     Vec2 move = {0};
     if (IsKeyDown(KEY_W)) move.y -= 1;
@@ -62,126 +47,174 @@ static Vec2 get_move_norm()
     if (IsKeyDown(KEY_D)) move.x += 1;
     return Vector2Normalize(move);
 }
-static Vec2 scale_norm(Vec2 move, const float scalar) {
-    return Vector2Scale(move, scalar);
+static Vec2 scale_norm(const Vec2 move_norm, const float scalar)
+{
+    return Vector2Scale(move_norm, scalar);
 }
-static Vec2 apply_move(Vec2 move, Vec2 pos) {
+static Vec2 apply_move(const Vec2 move, const Vec2 pos)
+{
     return Vector2Add(pos, move);
 }
-static void update_cam(Camera2D* cam, float move_speed, float rotate_speed) 
+
+// WSAD, moves the camera through the world (target only, offset stays the screen anchor)
+static void move_cam(Camera2D* cam, const float speed)
 {
-    Vec2 move_norm = get_move_norm();
-    Vec2 move = scale_norm(move_norm, move_speed);
-    cam->offset = apply_move(move, cam->offset);
+    const Vec2 move = scale_norm(get_move_norm(), speed);
+    cam->target = apply_move(move, cam->target);
+}
+static void rotate_cam(Camera2D* cam, const float speed)
+{
+    if (IsKeyDown(KEY_Q)) cam->rotation -= speed;
+    if (IsKeyDown(KEY_E)) cam->rotation += speed;
+}
+static void update_cam(Camera2D* cam, const float move_speed, const float rotate_speed)
+{
+    move_cam(cam, move_speed);
     rotate_cam(cam, rotate_speed);
-    cam->target = apply_move(cam->target, move);
 }
 
-// 3D Version
-#if GAME_D == 3
-Vec3 Cam_Info_ECS[6] = {
-    (Vec3){.x = 0, .y = 0, .z = 0}, // POS
-    (Vec3){.x = 0, .y = 0, .z = 0}, // PAST_POS
-    (Vec3){.x = 0, .y = 0, .z = 0}, // FORWARD
-    (Vec3){.x = 0, .y = 0, .z = 0}, // UP
-    (Vec3){.x = 0, .y = 0, .z = 0}, // RIGHT
-    (Vec3){.x = 0, .y = 0, .z = 0}  // LEFT
-};
+#if FUNCTIONAL
+static Camera2D move_cam_f(Camera2D cam, const float speed)
+{
+    move_cam(&cam, speed);
+    return cam;
+}
+static Camera2D rotate_cam_f(Camera2D cam, const float speed)
+{
+    rotate_cam(&cam, speed);
+    return cam;
+}
+static Camera2D update_cam_f(Camera2D cam, const float move_speed, const float rotate_speed)
+{
+    update_cam(&cam, move_speed, rotate_speed);
+    return cam;
+}
+#endif // FUNCTIONAL
+
+/* ------------------------------------------------------------------ */
+/* 3D                                                                  */
+/* ------------------------------------------------------------------ */
+#elif GAME_D == 3
+
+static Vec3 Cam_Info_ECS[5] = {0};
+
 typedef struct TrackedCam
 {
-        Vec3 past_pos;
-        Vec3 pos;
-        Vec3 up;
-        Vec3 right;
-        Vec3 forward;
-        Vec3 left;
-        Camera3D cam;
+    Vec3 past_pos;
+    Vec3 pos;
+    Vec3 up;
+    Vec3 right;
+    Vec3 forward;
+    Camera3D cam;
 } TrackedCam;
 
-Camera3D init_cam(const Vec3 pos, const Vec3 target, const Vec3 up) {
+static Camera3D init_cam(const Vec3 pos, const Vec3 target, const Vec3 up, const float fovy)
+{
     Camera3D cam = {0};
     cam.target = target;
     cam.position = pos;
     cam.projection = CAMERA_PERSPECTIVE;
     cam.up = up;
+    cam.fovy = fovy;
     return cam;
 }
-Vec3 get_forward(const Camera3D cam) {
+
+static Vec3 get_forward(const Camera3D cam)
+{
     return Vector3Subtract(cam.target, cam.position);
 }
-
-Vec3 get_right(const Camera3D cam) {
-    return Vector3CrossProduct(get_forward(cam), cam.up);
-}
-
-void rotate_cam(Camera3D cam, const float speed)
+static Vec3 get_flat(const Vec3 v)
 {
-    if (IsKeyDown(KEY_Q)) cam.rotation -= speed;
-    if (IsKeyDown(KEY_E)) cam.rotation += speed;
+    return (Vec3){.x = v.x, .y = 0, .z = v.z};
 }
-Vec3 get_flat(Vec3 v)
+static Vec3 get_flat_forward(const Camera3D cam)
 {
-    return (Vec3){v.x, .y = 0, .z = v.z};
+    return Vector3Normalize(get_flat(get_forward(cam)));
 }
-Vec3 get_move_norm(void)
+static Vec3 get_right(const Camera3D cam)
+{
+    return Vector3Normalize(Vector3CrossProduct(get_forward(cam), cam.up));
+}
+
+// local input: x = strafe, z = forward
+static Vec3 get_move_norm(void)
 {
     const signed int fwd = (int)IsKeyDown(KEY_W) - (int)IsKeyDown(KEY_S);
     const signed int strafe = (int)IsKeyDown(KEY_D) - (int)IsKeyDown(KEY_A);
     return Vector3Normalize((Vec3){.x = strafe, .y = 0, .z = fwd});
 }
-Vec3 scale_norm(const Vec3 move_norm, const float scalar) {
+// local input -> world direction (flat forward + right)
+static Vec3 get_move_world(const Camera3D cam, const Vec3 move_norm)
+{
+    const Vec3 fwd = Vector3Scale(get_flat_forward(cam), move_norm.z);
+    const Vec3 side = Vector3Scale(get_right(cam), move_norm.x);
+    return Vector3Add(fwd, side);
+}
+static Vec3 scale_norm(const Vec3 move_norm, const float scalar)
+{
     return Vector3Scale(move_norm, scalar);
 }
-Vec3 calc_move(const Vec3 move, const Vec3 pos) {
+static Vec3 apply_move(const Vec3 move, const Vec3 pos)
+{
     return Vector3Add(pos, move);
 }
 
-// call as move(pos, scale_norm(get_move_norm(), move_speed))
-void move(Vec3* pos, const Vec3 scaled_move_norm_vector) 
+// call as move_pos(&pos, scale_norm(get_move_world(cam, get_move_norm()), move_speed))
+// do it for cam.position AND cam.target so the view direction is kept
+static void move_pos(Vec3* pos, const Vec3 scaled_move_vector)
 {
-    // apply our movement vector in the same direction as our forward/target
-    *pos = calc_move(*pos, scaled_move_norm_vector);
+    *pos = apply_move(scaled_move_vector, *pos);
 }
-#endif
 
-#if FUNCTIONAL && GAME_D == 2
-Camera2D move_cam(Camera2D cam, const float speed)
+// Q/E yaw around cam.up, speed in radians
+static void rotate_cam(Camera3D* cam, const float speed)
 {
-    //WSAD
-    if (IsKeyDown(KEY_W)) cam.offset.y -= speed;
-    if (IsKeyDown(KEY_S)) cam.offset.y += speed;
-    if (IsKeyDown(KEY_A)) cam.offset.x -= speed;
-    if (IsKeyDown(KEY_D)) cam.offset.x += speed;
+    float angle = 0;
+    if (IsKeyDown(KEY_Q)) angle -= speed;
+    if (IsKeyDown(KEY_E)) angle += speed;
+    const Vec3 fwd = Vector3RotateByAxisAngle(get_forward(*cam), cam->up, angle);
+    cam->target = Vector3Add(cam->position, fwd);
+}
+
+static void update_cam(Camera3D* cam, const Vec3 target, const Vec3 pos)
+{
+    cam->position = pos;
+    cam->target = target;
+}
+
+static TrackedCam get_TrackedCam(const Vec3 pos, const Vec3 target, const Vec3 up, const float fovy)
+{
+    TrackedCam cam = {0};
+    cam.cam = init_cam(pos, target, up, fovy);
+    cam.forward = get_forward(cam.cam);
+    cam.up = up;
+    cam.right = get_right(cam.cam);
+    cam.pos = pos;
+    cam.past_pos = pos;
     return cam;
 }
-Camera2D rotate_cam(Camera2D cam, const float speed)
+
+static void update_TrackedCam(TrackedCam* cam, const Vec3 target, const Vec3 position_transformation)
 {
-    if (IsKeyDown(KEY_Q)) cam.rotation -= speed;
-    if (IsKeyDown(KEY_E)) cam.rotation += speed;
-    return cam;
+    cam->past_pos = cam->pos;
+    cam->pos = cam->cam.position;
+    cam->forward = get_forward(cam->cam);
+    cam->right = get_right(cam->cam);
+    update_cam(&cam->cam, target, position_transformation);
 }
 
-Camera2D update_cam(Camera2D cam, float move_speed) 
+// moves offset toward (or away from) the origin on each axis
+static Vec3 ZOOM_IN(const Vec3 offset, const float amount)
 {
-    Vec2 move_norm = get_move_norm();
-    Vec2 move = scale_norm(move_norm, move_speed);
-    cam.offset = apply_move(move, cam->offset);
-    return cam;
+    return (Vec3){
+        .x = offset.x - (amount * SIGN_OF(offset.x)),
+        .y = offset.y - (amount * SIGN_OF(offset.y)),
+        .z = offset.z - (amount * SIGN_OF(offset.z))
+    };
 }
-
-#endif
-
-Vec3 ZOOM_IN(Vec3 offset, float amount);
-Vec3 ZOOM_IN(Vec3 offset, float amount)
-{
-    float dx, dy, dz;
-    dx = -amount*offset.x;
-    dy = -amount*offset.y;
-    dz = -amount*offset.z;
-    return (Vec3){offset.x + dx, offset.y + dy, offset.z + dz};
-}
-Vec3 ZOOM_OUT(Vec3 offset, float amount);
-Vec3 ZOOM_OUT(Vec3 offset, float amount)
+static Vec3 ZOOM_OUT(const Vec3 offset, const float amount)
 {
     return ZOOM_IN(offset, -amount);
 }
+
+#endif // GAME_D
